@@ -73,7 +73,7 @@ export default async function middleware(req: NextRequest) {
     process.env.NODE_ENV === 'development'
       ? hostname.split('.').slice(-1)[0]
       : hostname.split('.').length >= 2
-      ? `${hostname.split('.').slice(-2).join('.')}`
+      ? `${hostname.split('.').slice(-3).join('.')}`
       : null;
 
   // custom domain / only for everything else routes
