@@ -45,10 +45,10 @@ const tabs = [
     name: 'Feedback',
     link: '/feedback',
   },
-  {
-    name: 'Changelog',
-    link: '/changelog',
-  },
+  // {
+  //   name: 'Changelog',
+  //   link: '/changelog',
+  // },
 ];
 
 export default async function HubLayout({ children, params }: Props) {
