@@ -18,7 +18,7 @@ export function UserAuthForm({
   buttonsClassname?: string;
 }) {
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [provider, setProvider] = useState<'github' | 'email'>('github');
+  const [provider, setProvider] = useState<'github' | 'email'>('email');
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   // TODO: Figure out issue with cookieOptions setting and set at root level instead of individually like rn
@@ -85,23 +85,23 @@ export function UserAuthForm({
     setIsLoading(false);
   }
 
-  async function handleGitHubSignIn(event: React.SyntheticEvent) {
-    setIsLoading(true);
+  // async function handleGitHubSignIn(event: React.SyntheticEvent) {
+  //   setIsLoading(true);
 
-    event.preventDefault();
-    setProvider('github');
+  //   event.preventDefault();
+  //   setProvider('github');
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: {
-        redirectTo: `${location.origin}/auth/callback?successRedirect=${successRedirect || location.origin}`,
-      },
-    });
+  //   const { error } = await supabase.auth.signInWithOAuth({
+  //     provider: 'github',
+  //     options: {
+  //       redirectTo: `${location.origin}/auth/callback?successRedirect=${successRedirect || location.origin}`,
+  //     },
+  //   });
 
-    if (error) {
-      toast.error(error.message);
-    }
-  }
+  //   if (error) {
+  //     toast.error(error.message);
+  //   }
+  // }
 
   return (
     <div className='grid gap-4'>
@@ -154,15 +154,15 @@ export function UserAuthForm({
           </Button>
         </div>
       </form>
-      <div className='relative'>
+      {/* <div className='relative'>
         <div className='absolute inset-0 flex items-center'>
           <span className='w-full border-t' />
         </div>
         <div className='relative flex justify-center text-xs uppercase'>
           <span className='bg-root text-muted-foreground px-2'>Or continue with</span>
         </div>
-      </div>
-      <Button
+      </div> */}
+      {/* <Button
         variant='outline'
         type='button'
         disabled={isLoading}
@@ -174,7 +174,7 @@ export function UserAuthForm({
           <Icons.Github className='mr-2 h-4 w-4' />
         )}{' '}
         Github
-      </Button>
+      </Button> */}
     </div>
   );
 }
