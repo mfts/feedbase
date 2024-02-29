@@ -1,6 +1,7 @@
 import { decode } from 'base64-arraybuffer';
 import { withProjectAuth, withUserAuth } from '@/lib/auth';
 import {
+  AnalyticsProps,
   ProjectApiKeyProps,
   ProjectApiKeyWithoutTokenProps,
   ProjectConfigProps,
@@ -8,7 +9,7 @@ import {
   ProjectProps,
   TeamMemberProps,
 } from '@/lib/types';
-import { generateApiToken, isSlugValid } from '@/lib/utils';
+import { generateApiToken, isSlugValid, isValidUrl } from '@/lib/utils';
 
 // Get Project
 export const getProjectBySlug = withProjectAuth<ProjectProps['Row']>(
@@ -255,7 +256,7 @@ export const getProjectConfigBySlug = withProjectAuth<ProjectConfigWithoutSecret
     const { data: config, error: configError } = await supabase
       .from('project_configs')
       .select(
-        'id, created_at, project_id, changelog_preview_style, changelog_twitter_handle, integration_discord_status, integration_discord_webhook, integration_discord_role_id, custom_domain, custom_domain_verified, integration_sso_status, integration_sso_url, feedback_allow_anon_upvoting, custom_theme, custom_theme_background, custom_theme_border, custom_theme_primary_foreground, custom_theme_root, custom_theme_secondary_background, custom_theme_accent'
+        'id, created_at, project_id, changelog_preview_style, changelog_twitter_handle, integration_discord_status, integration_discord_webhook, integration_discord_role_id, custom_domain, custom_domain_verified, integration_sso_status, integration_sso_url, feedback_allow_anon_upvoting, custom_theme, custom_theme_background, custom_theme_border, custom_theme_primary_foreground, custom_theme_root, custom_theme_secondary_background, custom_theme_accent, integration_slack_status, integration_slack_webhook, logo_redirect_url'
       )
       .eq('project_id', project!.id);
 
@@ -298,6 +299,22 @@ export const updateProjectConfigBySlug = (
       return {
         data: null,
         error: { message: 'changelog_preview_style must be one of: summary, content', status: 400 },
+      };
+    }
+
+    // Validate logo_redirect_url
+    if (data.logo_redirect_url && !isValidUrl(data.logo_redirect_url)) {
+      return {
+        data: null,
+        error: { message: 'logo_redirect_url must be a valid URL', status: 400 },
+      };
+    }
+
+    // Validate sso_url
+    if (data.integration_sso_url && !isValidUrl(data.integration_sso_url)) {
+      return {
+        data: null,
+        error: { message: 'integration_sso_url must be a valid URL', status: 400 },
       };
     }
 
@@ -360,10 +377,20 @@ export const updateProjectConfigBySlug = (
           data.custom_theme_accent !== undefined ? data.custom_theme_accent : config.custom_theme_accent,
         custom_theme_border:
           data.custom_theme_border !== undefined ? data.custom_theme_border : config.custom_theme_border,
+        integration_slack_status:
+          data.integration_slack_status !== undefined
+            ? data.integration_slack_status
+            : config.integration_slack_status,
+        integration_slack_webhook:
+          data.integration_slack_webhook !== undefined
+            ? data.integration_slack_webhook
+            : config.integration_slack_webhook,
+        logo_redirect_url:
+          data.logo_redirect_url !== undefined ? data.logo_redirect_url : config.logo_redirect_url,
       })
       .eq('id', config.id)
       .select(
-        'id, created_at, project_id, changelog_preview_style, changelog_twitter_handle, integration_discord_status, integration_discord_webhook, integration_discord_role_id, custom_domain, custom_domain_verified, integration_sso_status, integration_sso_url, feedback_allow_anon_upvoting, custom_theme, custom_theme_background, custom_theme_border, custom_theme_primary_foreground, custom_theme_root, custom_theme_secondary_background, custom_theme_accent'
+        'id, created_at, project_id, changelog_preview_style, changelog_twitter_handle, integration_discord_status, integration_discord_webhook, integration_discord_role_id, custom_domain, custom_domain_verified, integration_sso_status, integration_sso_url, feedback_allow_anon_upvoting, custom_theme, custom_theme_background, custom_theme_border, custom_theme_primary_foreground, custom_theme_root, custom_theme_secondary_background, custom_theme_accent, integration_slack_status, integration_slack_webhook, logo_redirect_url'
       );
 
     // Check for errors
@@ -503,4 +530,129 @@ export const deleteProjectApiKey = (slug: string, keyId: string, cType: 'server'
 
     // Return deleted API key
     return { data: deletedApiKey, error: null };
+  })(slug, cType);
+
+// Get project analytics
+export const getProjectAnalytics = (
+  slug: string,
+  cType: 'server' | 'route',
+  data?: { start: string; end: string }
+) =>
+  withProjectAuth(async (user, supabase, project, error) => {
+    // If any errors, return error
+    if (error) {
+      return { data: null, error };
+    }
+
+    // Check if tinybird variables are set
+    if (!process.env.TINYBIRD_API_URL || !process.env.TINYBIRD_API_KEY) {
+      return { data: null, error: { message: 'Tinybird variables not set.', status: 500 } };
+    }
+
+    // If no start or end, set default to 7 days ago and url encode (without Z at end)
+    const startDate = data?.start
+      ? data.start
+      : encodeURIComponent(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).slice(0, -1);
+    const endDate = data?.end
+      ? data.end
+      : encodeURIComponent(new Date(Date.now()).toISOString()).slice(0, -1);
+
+    // Fetch timeseries from Tinybird
+    const timeseries = await fetch(
+      `${process.env.TINYBIRD_API_URL}/v0/pipes/timeseries.json?end=${endDate}&start=${startDate}&project=${project?.slug}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.TINYBIRD_API_KEY}`,
+        },
+      }
+    ).then((res) => res.json());
+
+    // Check for errors
+    if (timeseries.error) {
+      return { data: null, error: { message: timeseries.error, status: 500 } };
+    }
+
+    // Fetch top feedback from Tinybird
+    const topFeedback = (await fetch(
+      `${process.env.TINYBIRD_API_URL}/v0/pipes/top_feedback.json?project=${project?.slug}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.TINYBIRD_API_KEY}`,
+        },
+      }
+    ).then((res) => res.json())) as { data: AnalyticsProps; error: string };
+
+    // Check for errors
+    if (topFeedback.error) {
+      return { data: null, error: { message: topFeedback.error, status: 500 } };
+    }
+
+    // Fetch top changelogs from Tinybird
+    const topChangelogs = (await fetch(
+      `${process.env.TINYBIRD_API_URL}/v0/pipes/top_changelogs.json?project=${project?.slug}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.TINYBIRD_API_KEY}`,
+        },
+      }
+    ).then((res) => res.json())) as { data: AnalyticsProps; error: string };
+
+    // Check for errors
+    if (topChangelogs.error) {
+      return { data: null, error: { message: topChangelogs.error, status: 500 } };
+    }
+
+    // Get all feedback for project
+    const { data: feedback, error: feedbackError } = await supabase
+      .from('feedback')
+      .select()
+      .eq('project_id', project!.id);
+
+    // Check for errors
+    if (feedbackError) {
+      return { data: null, error: { message: feedbackError.message, status: 500 } };
+    }
+
+    // Get all changelogs for project
+    const { data: changelogs, error: changelogsError } = await supabase
+      .from('changelogs')
+      .select()
+      .eq('project_id', project!.id);
+
+    // Check for errors
+    if (changelogsError) {
+      return { data: null, error: { message: changelogsError.message, status: 500 } };
+    }
+
+    // Restructure topFeedback data to show feedback title instead of id
+    const restructuredTopFeedback = topFeedback.data.map((item) => {
+      const feedbackData = feedback.find((feedback) => feedback.id === item.key);
+
+      return {
+        ...item,
+        key: feedbackData?.title || item.key,
+      };
+    });
+
+    // Restructure topChangelogs data to show changelog title instead of id
+    const restructuredTopChangelogs = topChangelogs.data.map((item) => {
+      const changelogData = changelogs.find((changelog) => changelog.id === item.key);
+
+      return {
+        ...item,
+        key: changelogData?.title || item.key,
+      };
+    });
+
+    // Return analytics
+    return {
+      data: {
+        timeseries: timeseries.data as AnalyticsProps,
+        topFeedback: restructuredTopFeedback.filter((feedback) => feedback.key !== '_root') as AnalyticsProps,
+        topChangelogs: restructuredTopChangelogs.filter(
+          (changelog) => changelog.key !== '_root'
+        ) as AnalyticsProps,
+      },
+      error: null,
+    };
   })(slug, cType);

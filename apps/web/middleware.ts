@@ -76,8 +76,11 @@ export default async function middleware(req: NextRequest) {
       ? `${hostname.split('.').slice(-3).join('.')}`
       : null;
 
-  // custom domain / only for everything else routes
-  if (rootDomain !== process.env.NEXT_PUBLIC_ROOT_DOMAIN) {
+  // If the request is for a custom domain, rewrite to project paths
+  if (
+    rootDomain !== process.env.NEXT_PUBLIC_ROOT_DOMAIN ||
+    process.env.CUSTOM_DOMAIN_WHITELIST?.split(',').includes(hostname)
+  ) {
     // Retrieve the project from the database
     const { data, error } = (await supabase
       .from('project_configs')
@@ -92,17 +95,29 @@ export default async function middleware(req: NextRequest) {
     }
 
     // If the project exists, rewrite the request to the project's folder
-    return NextResponse.rewrite(new URL(`/${data?.project?.slug}${path}`, req.url), {
-      headers: {
-        'x-pathname': path,
-        'x-project': data?.project?.slug,
-        'x-powered-by': 'Feedbase',
-      },
-    });
+    return NextResponse.rewrite(
+      new URL(
+        `/${data?.project?.slug}${path}${
+          req.nextUrl.searchParams ? `?${req.nextUrl.searchParams.toString()}` : ''
+        }`,
+        req.url
+      ),
+      {
+        headers: {
+          'x-pathname': path,
+          'x-project': data?.project?.slug,
+          'x-powered-by': 'Feedbase',
+        },
+      }
+    );
   }
 
   // rewrites for dash pages
-  if (hostname === `dash.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`) {
+  if (
+    hostname === `dash.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}` ||
+    (process.env.SUBDOMAIN_HOSTING === 'true' &&
+      hostname === `${process.env.DASHBOARD_SUBDOMAIN}.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`)
+  ) {
     // protect all app pages with authentication except for /login, /signup and /invite/*
     if (!session.data.session && path !== '/login' && path !== '/signup' && !path.startsWith('/invite/')) {
       return NextResponse.redirect(new URL('/login', req.url));
@@ -138,11 +153,19 @@ export default async function middleware(req: NextRequest) {
   }
 
   // rewrite everything else to `/[sub-domain]/[path] dynamic route
-  return NextResponse.rewrite(new URL(`/${hostname.split('.')[0]}${path}`, req.url), {
-    headers: {
-      'x-pathname': path,
-      'x-project': hostname.split('.')[0],
-      'x-powered-by': 'Feedbase',
-    },
-  });
+  return NextResponse.rewrite(
+    new URL(
+      `/${hostname.split('.')[0]}${path}${
+        req.nextUrl.searchParams ? `?${req.nextUrl.searchParams.toString()}` : ''
+      }`,
+      req.url
+    ),
+    {
+      headers: {
+        'x-pathname': path,
+        'x-project': hostname.split('.')[0],
+        'x-powered-by': 'Feedbase',
+      },
+    }
+  );
 }

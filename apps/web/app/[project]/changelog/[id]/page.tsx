@@ -7,6 +7,8 @@ import { cn } from '@ui/lib/utils';
 import { fontMono } from '@ui/styles/fonts';
 import { Avatar, AvatarFallback, AvatarImage } from 'ui/components/ui/avatar';
 import { getPublicProjectChangelogs } from '@/lib/api/public';
+import { formatRootUrl } from '@/lib/utils';
+import AnalyticsWrapper from '@/components/hub/analytics-wrapper';
 import { Icons } from '@/components/shared/icons/icons-static';
 
 type Props = {
@@ -71,7 +73,7 @@ export default async function ChangelogPage({ params }: Props) {
   }
 
   return (
-    <>
+    <AnalyticsWrapper projectSlug={params.project} changelogId={changelog.id}>
       {/* // Row Splitting up date and Content  */}
       <div
         className='relative flex w-full flex-col px-5 sm:px-10 md:flex-row md:px-10 lg:px-20'
@@ -142,7 +144,9 @@ export default async function ChangelogPage({ params }: Props) {
               {/* Twitter */}
               <Link
                 className='text-foreground/70 hover:text-foreground/95 transition-all duration-200 hover:scale-110'
-                href={`https://twitter.com/intent/tweet?text=Make sure to check out ${changelog.title} by ${changelog.author.full_name}!&url=https://feedbase.app/changelog/${changelog.slug}`}
+                href={`https://twitter.com/intent/tweet?text=Make sure to check out ${changelog.title} by ${
+                  changelog.author.full_name
+                }!&url=${formatRootUrl(params.project, `/changelog/${changelog.slug}`)}`}
                 target='_blank'
                 rel='noopener noreferrer'>
                 <Icons.Twitter className='h-6 w-6' />
@@ -193,6 +197,6 @@ export default async function ChangelogPage({ params }: Props) {
           </div>
         </div>
       </div>
-    </>
+    </AnalyticsWrapper>
   );
 }

@@ -4,11 +4,12 @@ import { notFound } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@ui/components/ui/avatar';
 import { Separator } from '@ui/components/ui/separator';
 import { cn } from '@ui/lib/utils';
-import { CheckCircle2, CircleDashed, CircleDot, CircleDotDashed, XCircle } from 'lucide-react';
+import { BadgeCheck, CheckCircle2, CircleDashed, CircleDot, CircleDotDashed, XCircle } from 'lucide-react';
 import { getCommentsForFeedbackById } from '@/lib/api/comments';
 import { getPublicProjectFeedback } from '@/lib/api/public';
 import { getCurrentUser } from '@/lib/api/user';
 import { PROSE_CN } from '@/lib/constants';
+import AnalyticsWrapper from '@/components/hub/analytics-wrapper';
 import CommentsList from '@/components/hub/feedback/comments/comments-list';
 
 type Props = {
@@ -94,7 +95,7 @@ export default async function FeedbackDetails({ params }: Props) {
   const { data: user } = await getCurrentUser('server');
 
   return (
-    <>
+    <AnalyticsWrapper projectSlug={params.project} feedbackId={params.id}>
       {/* // Row Splitting up date and Content  */}
       <div className='relative flex w-full flex-row px-5 sm:px-10 md:px-8 lg:px-10' key={feedback.id}>
         <div className='flex h-full w-full flex-col md:w-5/6 md:border-r md:pr-5 lg:flex-row'>
@@ -210,13 +211,20 @@ export default async function FeedbackDetails({ params }: Props) {
                   {/* Author */}
                   <div className='text-foreground/60 flex flex-row items-center justify-start gap-2 font-light'>
                     {/* User */}
-                    <Avatar className='h-6 w-6 select-none gap-2 border'>
-                      <AvatarImage src={feedback.user.avatar_url || ''} alt={feedback.user.full_name} />
-                      <AvatarFallback className='text-xs font-light'>
-                        {feedback.user.full_name[0]}
-                      </AvatarFallback>
+                    <Avatar className='h-6 w-6 select-none gap-2 overflow-visible border'>
+                      <div className='h-full w-full overflow-hidden rounded-full'>
+                        <AvatarImage src={feedback.user.avatar_url || ''} alt={feedback.user.full_name} />
+                        <AvatarFallback className='text-xs font-light'>
+                          {feedback.user.full_name[0]}
+                        </AvatarFallback>
+                        {/* If team member, add small verified badge to top of profile picture */}
+                        {feedback.user.isTeamMember ? (
+                          <div className='bg-root absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full'>
+                            <BadgeCheck className='fill-highlight stroke-root outline-root z-10 h-3.5 w-3.5 outline-2' />
+                          </div>
+                        ) : null}
+                      </div>
                     </Avatar>
-
                     {/* Name */}
                     <span className='text-foreground/90 text-sm font-light'>{feedback.user.full_name}</span>
                   </div>
@@ -321,9 +329,19 @@ export default async function FeedbackDetails({ params }: Props) {
               {/* Author */}
               <div className='text-foreground/60 flex flex-row items-center justify-start gap-2 font-light'>
                 {/* User */}
-                <Avatar className='h-6 w-6 select-none gap-2 border'>
-                  <AvatarImage src={feedback.user.avatar_url || ''} alt={feedback.user.full_name} />
-                  <AvatarFallback className='text-xs font-light'>{feedback.user.full_name[0]}</AvatarFallback>
+                <Avatar className='h-6 w-6 select-none gap-2 overflow-visible border'>
+                  <div className='h-full w-full overflow-hidden rounded-full'>
+                    <AvatarImage src={feedback.user.avatar_url || ''} alt={feedback.user.full_name} />
+                    <AvatarFallback className='text-xs font-light'>
+                      {feedback.user.full_name[0]}
+                    </AvatarFallback>
+                    {/* If team member, add small verified badge to top of profile picture */}
+                    {feedback.user.isTeamMember ? (
+                      <div className='bg-root absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full'>
+                        <BadgeCheck className='fill-highlight stroke-root outline-root z-10 h-3.5 w-3.5 outline-2' />
+                      </div>
+                    ) : null}
+                  </div>
                 </Avatar>
 
                 {/* Name */}
@@ -333,6 +351,6 @@ export default async function FeedbackDetails({ params }: Props) {
           </div>
         </div>
       </div>
-    </>
+    </AnalyticsWrapper>
   );
 }

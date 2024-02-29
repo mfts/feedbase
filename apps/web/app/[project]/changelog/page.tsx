@@ -6,6 +6,8 @@ import { fontMono } from '@ui/styles/fonts';
 import { Separator } from 'ui/components/ui/separator';
 import { getProjectBySlug, getProjectConfigBySlug } from '@/lib/api/projects';
 import { getPublicProjectChangelogs } from '@/lib/api/public';
+import AnalyticsWrapper from '@/components/hub/analytics-wrapper';
+import SubscribeToEmailUpdates from '@/components/hub/modals/subscribe-email-modal';
 
 type Props = {
   params: { project: string };
@@ -68,7 +70,7 @@ export default async function Changelogs({ params }: Props) {
   }
 
   return (
-    <div className='flex h-full w-full flex-col gap-10'>
+    <AnalyticsWrapper className='flex h-full w-full flex-col gap-10' projectSlug={params.project}>
       <div className='flex items-center px-5 sm:px-10 md:px-10 lg:px-20'>
         <div className='flex w-full flex-col items-start gap-4'>
           <h1 className='text-3xl font-medium sm:text-4xl'>Changelog</h1>
@@ -77,11 +79,22 @@ export default async function Changelogs({ params }: Props) {
           </p>
 
           {/* Buttons */}
-          <div className='flex select-none flex-row items-center gap-4 text-sm'>
+          <div className='flex select-none flex-row flex-wrap items-center gap-4 text-sm'>
+            {/* Email */}
+            <SubscribeToEmailUpdates projectSlug={params.project}>
+              <button
+                type='button'
+                className='hover:text-foreground/95 text-highlight transition-colors duration-200'>
+                Subscribe to Updates
+              </button>
+            </SubscribeToEmailUpdates>
+
+            <span className='text-foreground/70'>·</span>
+
             {/* Twitter */}
             {projectConfig.changelog_twitter_handle !== null &&
               projectConfig.changelog_twitter_handle !== '' && (
-                <>
+                <div className='flex w-1/2 flex-row items-center gap-4 sm:w-fit'>
                   <Link
                     href={`https://x.com/${projectConfig.changelog_twitter_handle}`}
                     target='_blank'
@@ -90,8 +103,8 @@ export default async function Changelogs({ params }: Props) {
                     Follow us on Twitter
                   </Link>
 
-                  <span className='text-foreground/70'>·</span>
-                </>
+                  <span className='text-foreground/70 opacity-0 sm:opacity-100'>·</span>
+                </div>
               )}
 
             {/* RRS Update Feed */}
@@ -192,6 +205,6 @@ export default async function Changelogs({ params }: Props) {
           </div>
         )}
       </div>
-    </div>
+    </AnalyticsWrapper>
   );
 }

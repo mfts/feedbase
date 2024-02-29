@@ -14,6 +14,11 @@ export type TeamMemberProps = Database['public']['Tables']['profiles']['Row'] & 
   joined_at: string;
 };
 
+export type NotificationProps = Database['public']['Tables']['notifications']['Row'] & {
+  project: { name: string; slug: string; icon: string };
+  initiator: { full_name: string };
+};
+
 export type ProjectInviteProps = Database['public']['Tables']['project_invites'];
 
 export type ProjectApiKeyProps = Database['public']['Tables']['project_api_keys'];
@@ -24,6 +29,12 @@ export type ExtendedInviteProps = ProjectInviteProps['Row'] & {
   project: { name: string; slug: string; icon: string };
   creator: { full_name: string };
 };
+
+export type AnalyticsProps = {
+  key: string;
+  clicks: number;
+  visitors: number;
+}[];
 
 export type ChangelogProps = Database['public']['Tables']['changelogs'];
 
@@ -36,7 +47,7 @@ export type FeedbackProps = Database['public']['Tables']['feedback'];
 export type FeedbackTagProps = Database['public']['Tables']['feedback_tags'];
 
 export type FeedbackWithUserProps = Database['public']['Tables']['feedback']['Row'] & {
-  user: ProfileProps['Row'];
+  user: ProfileProps['Row'] & { isTeamMember: boolean };
   tags: { name: string; color: string }[];
   has_upvoted: boolean;
 };
@@ -49,7 +60,7 @@ export type FeedbackWithUserInputProps = Database['public']['Tables']['feedback'
 export type FeedbackCommentProps = Database['public']['Tables']['feedback_comments'];
 
 export type FeedbackCommentWithUserProps = Database['public']['Tables']['feedback_comments']['Row'] & {
-  user: ProfileProps['Row'];
+  user: ProfileProps['Row'] & { isTeamMember: boolean };
   has_upvoted: boolean;
   replies: FeedbackCommentWithUserProps[];
 };

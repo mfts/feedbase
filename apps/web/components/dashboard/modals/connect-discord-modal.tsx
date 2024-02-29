@@ -111,7 +111,7 @@ export default function DiscordIntegrationModal({
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>Connect Discord Integration</ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
-            Recieve notifications directly in your Discord server.
+            Receive notifications directly in your Discord server.
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
         <div className='flex flex-col gap-4'>
